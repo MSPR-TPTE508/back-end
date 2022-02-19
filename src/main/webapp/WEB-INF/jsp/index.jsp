@@ -12,11 +12,15 @@
         </header>
 
         <main class="w3-container w3-display-middle">
-            <form method="POST">
-                <label for="femail">Adresse e-mail:</label><br>
-                <input type="text" id="femail" name="femail" class="w3-input w3-border w3-round"><br>
-                <label for="fpassword">Mot de passe:</label><br>
-                <input type="text" id="fpassword" name="fpassword" class="w3-input w3-border w3-round"><br>
+            <form method="post" action="/login">
+                <label for="username">Adresse e-mail:</label><br>
+                <input type="text" id="username" name="username" class="w3-input w3-border w3-round"><br>
+                <label for="password">Mot de passe:</label><br>
+                <input type="password" id="password" name="password" class="w3-input w3-border w3-round"><br>
+
+                <!-- Without csrf token, you will be unable to log in -->
+                <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"/>
+                
                 <input type="submit" class="w3-input w3-border w3-round">
             <form>
 
