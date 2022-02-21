@@ -6,7 +6,8 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.ldap.authentication.ad.ActiveDirectoryLdapAuthenticationProvider;
+
+import fr.epsi.clinic.provider.authentication.ClinicAuthenticationProvider;
 
 @Configuration
 public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
@@ -23,16 +24,15 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
         http
         .authorizeRequests()
             .antMatchers(HttpMethod.GET, "/login").permitAll()
-            .anyRequest().fullyAuthenticated()
+            .antMatchers(HttpMethod.GET, "/").fullyAuthenticated()
+            .antMatchers("/**").denyAll()
             .and()
         .formLogin().loginPage("/login");
     }
 
     @Override
     protected void configure(AuthenticationManagerBuilder auth) {
-        ActiveDirectoryLdapAuthenticationProvider provider = new ActiveDirectoryLdapAuthenticationProvider(ldapDomain, ldapUrl);
-        provider.setConvertSubErrorCodesToExceptions(true);
-        provider.setUseAuthenticationRequestCredentials(true);
+        ClinicAuthenticationProvider provider = new ClinicAuthenticationProvider(ldapDomain, ldapUrl);
 
         auth.authenticationProvider(provider);
     }

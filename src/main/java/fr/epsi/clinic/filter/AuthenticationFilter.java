@@ -21,7 +21,8 @@ public class AuthenticationFilter implements Filter {
  
         HttpServletRequest req = (HttpServletRequest) request;
      
-        System.out.println(req.getRequestURI());
+        System.out.println(req.getRequestURI() + "=>" + req.getMethod());
+
 
         chain.doFilter(request, response);
     }
