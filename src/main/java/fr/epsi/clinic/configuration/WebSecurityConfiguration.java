@@ -25,9 +25,14 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
         .authorizeRequests()
             .antMatchers(HttpMethod.GET, "/login").permitAll()
             .antMatchers(HttpMethod.GET, "/").fullyAuthenticated()
+            .antMatchers("/h2-console/**").permitAll()
             .antMatchers("/**").denyAll()
             .and()
-        .formLogin().loginPage("/login");
+            .csrf().ignoringAntMatchers("/h2-console/**")
+            .and()
+            .headers().frameOptions().sameOrigin()
+            .and()
+            .formLogin().loginPage("/login");
     }
 
     @Override
