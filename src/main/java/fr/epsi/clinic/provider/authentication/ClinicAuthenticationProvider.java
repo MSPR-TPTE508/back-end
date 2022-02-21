@@ -2,6 +2,7 @@ package fr.epsi.clinic.provider.authentication;
 
 import java.util.ArrayList;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -10,8 +11,14 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.ldap.authentication.ad.ActiveDirectoryLdapAuthenticationProvider;
 import org.springframework.stereotype.Component;
 
+import fr.epsi.clinic.service.ClinicAuthenticationService;
+
 @Component
 public class ClinicAuthenticationProvider implements AuthenticationProvider {
+
+    @Autowired
+    private ClinicAuthenticationService clinicAuthenticationService;
+
     private ActiveDirectoryLdapAuthenticationProvider ldapProvider;
 
     public ClinicAuthenticationProvider(String ldapDomain, String ldapUrl){
