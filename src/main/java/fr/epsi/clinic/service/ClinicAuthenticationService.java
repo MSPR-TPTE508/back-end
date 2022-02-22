@@ -4,20 +4,34 @@ import java.security.InvalidParameterException;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.stereotype.Service;
 
 import fr.epsi.clinic.model.Staff;
+import fr.epsi.clinic.model.StaffLdapDetails;
 
 @Service
 public class ClinicAuthenticationService {
+
+    @Autowired
+    StaffService staffService;
 
     public User getUserByUsername(String username){
         return null;
     }
 
-    public void addUser(User user){
-        //save to repository
+    public void addUser(HttpServletRequest request, StaffLdapDetails staffLdapDetails){
+        Staff staff = new Staff();
+        String userAgent = request.getHeader("user-agent");
+        String currentIp = request.getRemoteAddr();
+
+        //Initialize a staff object with its AD and Request values.
+        staff.setEmail(staffLdapDetails.getActiveDirectoryEmail());
+        staff.setBrowser(userAgent);
+        staff.setLastIpAddress(currentIp);
+
+        staffService.addStaff(staff);
     }
 
     public boolean isUsuerIpIsUsual(HttpServletRequest request, Staff staff){
@@ -26,7 +40,7 @@ public class ClinicAuthenticationService {
             throw new InvalidParameterException("request is empty");
         }
 
-        final String currentIp = request.getHeader("host");
+        final String currentIp = request.getRemoteAddr();
 
         if (currentIp == null) {
             throw new NullPointerException("currentIp from client cannot be found");
@@ -74,7 +88,7 @@ public class ClinicAuthenticationService {
         return currentBrowser.equals(lastBrowser);
     }
 
-    public boolean isUserAntiBruteForceDisabled(User user){
+    public boolean isUserAntiBruteForceDisabled(Staff staff){
         //TODO implémenter la logique
         return true;
     }
@@ -83,16 +97,16 @@ public class ClinicAuthenticationService {
         //TODO implémenter la logique
     }
 
-    public boolean verifyGivenOTP(String givenOTP, User user){
+    public boolean verifyGivenOTP(String givenOTP, Staff staff){
         //TODO implémenter la logique
         return true;
     }
 
-    public void deleteUserOTP(User user){
+    public void deleteUserOTP(Staff staff){
         //Delete user from BDD
     }
 
-    public void sendEmailToConfirmUserIdentity(User user){
+    public void sendEmailToConfirmUserIdentity(Staff staff){
         //TODO implémenter la logique
     }
 }

@@ -10,18 +10,15 @@ import fr.epsi.clinic.repository.StaffRepository;
 
 @Service
 public class StaffService {
+    
     @Autowired
     private StaffRepository staffRepository;
-
-    public Staff getStaffByEmail(String email){
-        return staffRepository.getById(email);
-    }
 
     public void addStaff(Staff staff){
         staffRepository.save(staff);
     }
 
-    public Optional<Staff> getUserByEmail(String email){
+    public Optional<Staff> findUserByEmail(String email){
         return this.staffRepository.findById(email);
     }
 

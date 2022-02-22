@@ -1,5 +1,6 @@
 package fr.epsi.clinic.configuration;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -8,6 +9,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 
 import fr.epsi.clinic.provider.authentication.ClinicAuthenticationProvider;
+import fr.epsi.clinic.service.ClinicAuthenticationService;
+import fr.epsi.clinic.service.StaffService;
 
 @Configuration
 public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
@@ -17,6 +20,12 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
 
     @Value("${ldap.domain}")
     private String ldapDomain;
+
+    @Autowired
+    private StaffService staffService;
+
+    @Autowired
+    private ClinicAuthenticationService clinicAuthenticationService;
 
 
     @Override
@@ -37,7 +46,7 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
 
     @Override
     protected void configure(AuthenticationManagerBuilder auth) {
-        ClinicAuthenticationProvider provider = new ClinicAuthenticationProvider(ldapDomain, ldapUrl);
+        ClinicAuthenticationProvider provider = new ClinicAuthenticationProvider(ldapDomain, ldapUrl, staffService, clinicAuthenticationService);
 
         auth.authenticationProvider(provider);
     }
