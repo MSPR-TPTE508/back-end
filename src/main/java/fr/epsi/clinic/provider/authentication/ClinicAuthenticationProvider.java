@@ -1,28 +1,24 @@
 package fr.epsi.clinic.provider.authentication;
 
-import java.util.Enumeration;
 import java.util.Objects;
 import java.util.Optional;
 
-import javax.mail.AuthenticationFailedException;
 import javax.servlet.http.HttpServletRequest;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.ldap.authentication.ad.ActiveDirectoryLdapAuthenticationProvider;
 import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import fr.epsi.clinic.mapper.StaffMapper;
 import fr.epsi.clinic.model.Staff;
 import fr.epsi.clinic.model.StaffLdapDetails;
-import fr.epsi.clinic.repository.StaffRepository;
 import fr.epsi.clinic.service.ClinicAuthenticationService;
 import fr.epsi.clinic.service.StaffService;
 
@@ -71,9 +67,28 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
         //Add a Staff if the he's not already in our Database
         if(optionalStaff.isEmpty()){
             this.clinicAuthenticationService.addUser(request, staffLdapDetails);
+
+            //return successfull Authentication
+            return (UsernamePasswordAuthenticationToken)authentication;
         }
-        
-        return new UsernamePasswordAuthenticationToken(authentication.getPrincipal(),authentication.getCredentials(), authentication.getAuthorities());
+
+        //Check if antibruteforce is enabled for the staff
+        boolean isUserAntiBruteForceDisabled = this.clinicAuthenticationService.isUserAntiBruteForceDisabled(optionalStaff.get());
+
+        if(!isUserAntiBruteForceDisabled){
+            //TODO show to the user that the account is locked and the remaining time to be unlocked
+        }
+
+        //Check for suspicious connection
+        boolean isSuspiciousConnection = this.isSuspiciousConnection(request, optionalStaff.get());
+
+        if(isSuspiciousConnection){
+            System.out.println("UNUSUAL CONNECTION !!");
+            //TODO send an email that will ask the user to confirm its identity, once he clicked on "yes", update our database with its new informations
+        }
+
+        //Return successfull authentication
+        return (UsernamePasswordAuthenticationToken)authentication;
     }
 
     /**
@@ -87,6 +102,19 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
         } catch (AuthenticationException e){
             return null;
         }
+    }
+
+    private boolean isSuspiciousConnection(HttpServletRequest request, Staff staff){
+
+        if(this.clinicAuthenticationService.isUserBrowserIsUsual(request, staff)){
+            return false;
+        }
+
+        if(this.clinicAuthenticationService.isUsuerIpIsUsual(request, staff)){
+            return false;
+        }
+        
+        return true;
     }
 
     @Override
