@@ -1,9 +1,13 @@
 package fr.epsi.clinic.service;
 
+import java.security.InvalidParameterException;
+
 import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.security.core.userdetails.User;
 import org.springframework.stereotype.Service;
+
+import fr.epsi.clinic.model.Staff;
 
 @Service
 public class ClinicAuthenticationService {
@@ -21,9 +25,31 @@ public class ClinicAuthenticationService {
         return true;
     }
 
-    public boolean isUserBrowserIsUsual(HttpServletRequest request, User user){
-        //TODO implémenter la logique
-        return true;
+    public boolean isUserBrowserIsUsual(HttpServletRequest request, Staff staff){
+        // Get current browser
+        if (request == null) {
+            throw new InvalidParameterException("request is empty");
+        }
+
+        final String currentBrowser = request.getHeader("user-agent");
+
+        if (currentBrowser == null) {
+            throw new NullPointerException("Current browser from client cannot be found");
+        }
+
+        // Get last browser
+        if (staff == null) {
+            throw new InvalidParameterException("staff is empty");
+        }
+        
+        final String lastBrowser = staff.getBrowser();
+
+        if (lastBrowser == null) {
+            throw new NullPointerException("Last browser cannot be found");
+        }
+
+        // Compare both of them
+        return currentBrowser.equals(lastBrowser);
     }
 
     public boolean isUserAntiBruteForceDisabled(User user){
