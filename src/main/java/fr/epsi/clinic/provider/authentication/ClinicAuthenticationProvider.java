@@ -1,7 +1,9 @@
 package fr.epsi.clinic.provider.authentication;
 
+import java.util.LinkedHashMap;
+import java.util.Objects;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.ldap.core.DirContextOperations;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -11,7 +13,6 @@ import org.springframework.security.ldap.authentication.ad.ActiveDirectoryLdapAu
 import org.springframework.stereotype.Component;
 
 import fr.epsi.clinic.mapper.StaffMapper;
-import fr.epsi.clinic.model.Staff;
 import fr.epsi.clinic.service.ClinicAuthenticationService;
 
 @Component
@@ -21,10 +22,12 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
     private ClinicAuthenticationService clinicAuthenticationService;
 
     private ActiveDirectoryLdapAuthenticationProvider ldapProvider;
+    private StaffMapper staffMapper = new StaffMapper();
 
     public ClinicAuthenticationProvider(String ldapDomain, String ldapUrl){
         this.ldapProvider = new ActiveDirectoryLdapAuthenticationProvider(ldapDomain, ldapUrl);
         this.ldapProvider.setConvertSubErrorCodesToExceptions(true);
+        this.ldapProvider.setUserDetailsContextMapper(staffMapper);
     }
 
     public ClinicAuthenticationProvider(){
@@ -37,11 +40,12 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
     @Override
     public Authentication authenticate(Authentication authentication) 
       throws AuthenticationException {
-        final boolean isUserAuthenticateToActiveDirectory = this.authenticateToActiveDirectory(authentication);
-        
-        if(!isUserAuthenticateToActiveDirectory){
+        authentication = this.authenticateToActiveDirectory(authentication);
+
+        if(Objects.isNull(authentication)){
             throw new BadCredentialsException("Wrong username or password");
         }
+        
         return new UsernamePasswordAuthenticationToken(authentication.getPrincipal(),authentication.getCredentials(), authentication.getAuthorities());
     }
 
@@ -50,26 +54,13 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
      * @param authentication
      * @return true if user is autenticated from Active Directory otherwise false
      */
-    private boolean authenticateToActiveDirectory(Authentication authentication){
+    private Authentication authenticateToActiveDirectory(Authentication authentication){
         try {
-            this.ldapProvider.authenticate(authentication);
-            return true;
+            
+            return this.ldapProvider.authenticate(authentication);
         } catch (AuthenticationException e){
-            return false;
+            return null;
         }
-    }
-
-    private Staff getStaffFromActiveDirectory(Authentication authentication){
-        return null;
-    }
-
-    /**
-     * Populate a Staff with active directory user's values
-     * @param ctx
-     * @return a populated Staff from the active directory user's values
-     */
-    private Staff populateStaffFromActiveDirectoryValues(DirContextOperations ctx){
-        return StaffMapper.mapUserFromContext(ctx);
     }
 
     @Override

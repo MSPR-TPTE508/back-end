@@ -1,5 +1,7 @@
 package fr.epsi.clinic.service;
 
+import java.util.Optional;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -18,4 +20,9 @@ public class StaffService {
     public void addStaff(Staff staff){
         staffRepository.save(staff);
     }
+
+    public Optional<Staff> getUserByEmail(String email){
+        return this.staffRepository.findById(email);
+    }
+
 }
