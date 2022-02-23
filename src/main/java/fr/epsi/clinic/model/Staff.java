@@ -1,5 +1,7 @@
 package fr.epsi.clinic.model;
 
+import java.util.Date;
+
 import javax.persistence.Entity;
 import javax.persistence.Id;
 
@@ -10,9 +12,18 @@ public class Staff {
 
     private String browser;
     private String lastIpAddress;
-    private Integer failedConnections;
+
+    private Integer failedConnections = 0;
+    private Date lockTime;
+
     private String OTP;
 
+    public Date getLockTime() {
+        return lockTime;
+    }
+    public void setLockTime(Date lockTime) {
+        this.lockTime = lockTime;
+    }
     public String getOTP() {
         return OTP;
     }
