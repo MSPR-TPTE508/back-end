@@ -5,6 +5,8 @@ import java.util.Optional;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.ldap.core.LdapTemplate;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -31,6 +33,9 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
     private ActiveDirectoryLdapAuthenticationProvider ldapProvider;
     private StaffMapper staffMapper = new StaffMapper();
 
+    @Autowired
+    LdapTemplate ldapTemplate;
+
     public ClinicAuthenticationProvider(String ldapDomain, String ldapUrl, StaffService staffService, ClinicAuthenticationService clinicAuthenticationService){
         this.ldapProvider = new ActiveDirectoryLdapAuthenticationProvider(ldapDomain, ldapUrl);
         this.ldapProvider.setConvertSubErrorCodesToExceptions(true);
@@ -50,19 +55,40 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
         HttpServletRequest request = ((ServletRequestAttributes)RequestContextHolder.getRequestAttributes()).getRequest();
+        String username = authentication.getPrincipal().toString();
+        Optional<Staff> optionalStaff = null;
+        StaffLdapDetails staffLdapDetails = null;
+
         authentication = this.authenticateToActiveDirectory(authentication);
 
-        if(Objects.isNull(authentication)){
+        //Get staff informations from active directory
+        Staff activeDirectoryStaff = this.staffService.findStaffInActiveDirectory(username);
+
+        optionalStaff = staffService.findUserByEmail(activeDirectoryStaff.getEmail());
+        
+        //Create specific userDetails to ensure that the user has been authenticated by the Active directory
+        if(Objects.nonNull(authentication)){
+            staffLdapDetails = (StaffLdapDetails)authentication.getPrincipal();
+        }
+
+        if(optionalStaff.isPresent()){
+            //Check if antibruteforce is enabled for the staff
+            boolean isUserAntiBruteForceDisabled = this.clinicAuthenticationService.isUserAntiBruteForceDisabled(optionalStaff.get());
+
+            if(!isUserAntiBruteForceDisabled){
+                throw new BadCredentialsException("Account locked due to a number of failed connections, please try again in few minutes");
+            }
+        }
+
+
+        //If active directory cannot authenticate the user
+        if(Objects.isNull(staffLdapDetails)){   
+            if(optionalStaff.isPresent()){
+                this.clinicAuthenticationService.incrementStaffFailedConnection(optionalStaff.get());
+            }
+            
             throw new BadCredentialsException("Wrong username or password");
         }
-
-        StaffLdapDetails staffLdapDetails = (StaffLdapDetails)authentication.getPrincipal();
-
-        if(Objects.isNull(staffLdapDetails)){
-            throw new BadCredentialsException("Unexpected error during authentication, user principal is null");
-        }
-
-        Optional<Staff> optionalStaff = staffService.findUserByEmail(staffLdapDetails.getActiveDirectoryEmail());
 
         //Add a Staff if the he's not already in our Database
         if(optionalStaff.isEmpty()){
@@ -70,13 +96,6 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
 
             //return successfull Authentication
             return (UsernamePasswordAuthenticationToken)authentication;
-        }
-
-        //Check if antibruteforce is enabled for the staff
-        boolean isUserAntiBruteForceDisabled = this.clinicAuthenticationService.isUserAntiBruteForceDisabled(optionalStaff.get());
-
-        if(!isUserAntiBruteForceDisabled){
-            //TODO show to the user that the account is locked and the remaining time to be unlocked
         }
 
         //Check for suspicious connection

@@ -23,7 +23,6 @@ public class AuthenticationFilter implements Filter {
      
         System.out.println(req.getRequestURI() + "=>" + req.getMethod());
 
-
         chain.doFilter(request, response);
     }
 

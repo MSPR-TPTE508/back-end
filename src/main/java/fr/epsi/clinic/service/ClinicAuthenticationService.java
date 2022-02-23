@@ -1,10 +1,15 @@
 package fr.epsi.clinic.service;
 
 import java.security.InvalidParameterException;
+import java.util.Date;
+import java.util.List;
+import java.util.Objects;
 
 import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.ldap.core.AttributesMapper;
+import org.springframework.ldap.core.LdapTemplate;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.stereotype.Service;
 
@@ -31,7 +36,7 @@ public class ClinicAuthenticationService {
         staff.setBrowser(userAgent);
         staff.setLastIpAddress(currentIp);
 
-        staffService.addStaff(staff);
+        staffService.saveStaff(staff);
     }
 
     public boolean isUsuerIpIsUsual(HttpServletRequest request, Staff staff){
@@ -88,9 +93,71 @@ public class ClinicAuthenticationService {
         return currentBrowser.equals(lastBrowser);
     }
 
+    /**
+     * Will increase attempt failed in the Staff values until it lock the account and compare its lock time with the time of a locked account
+     * @param staff
+     * @return true if the user is not locked, else false.
+     */
     public boolean isUserAntiBruteForceDisabled(Staff staff){
-        //TODO implémenter la logique
+        int failedConnections = staff.getFailedConnections();
+        int nbOfFailedMax = 3;
+
+        if(this.isUserAccountLocked(staff)){
+            return false;
+        }
+
+        //If the staff has more than X attempt and the staff account is not locked
+        if(failedConnections >= nbOfFailedMax && !this.isUserAccountLocked(staff)){
+            staff.setFailedConnections(0);
+        }
+
+        if(failedConnections >= nbOfFailedMax){
+            lockStaffAccount(staff);
+            return false;
+        }
+
         return true;
+    }
+
+    /**
+     * Set current date to lock staff account
+     * @param staff
+     */
+    private void lockStaffAccount(Staff staff){
+        staff.setLockTime(new Date());
+        staffService.saveStaff(staff);
+    }
+
+    /**
+     * Check if a staff is locked by checking the locked account time and the current time
+     * @param staff
+     * @return true if the user is locked, else false
+     */
+    private boolean isUserAccountLocked(Staff staff){
+
+        if(Objects.isNull(staff.getLockTime())){
+            return false;
+        }
+
+        int lockTimeDuration = 2 * 60 * 1000;
+        long lockTimeInMillis = staff.getLockTime().getTime();
+        long currentTimeInMillis = System.currentTimeMillis();
+         
+        //if user account lock time is less than the current date
+        if ((lockTimeInMillis + lockTimeDuration) < currentTimeInMillis) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Add one to the failed connection for a given Staff
+     * @param staff
+     */
+    public void incrementStaffFailedConnection(Staff staff){
+        staff.setFailedConnections(staff.getFailedConnections() + 1);
+        staffService.saveStaff(staff);
     }
 
     public void doubleAuthentication(){
