@@ -117,8 +117,8 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
             final EmailServiceConfiguration emailServiceConfiguration = new EmailServiceConfiguration();
             emailServiceConfiguration.sendHtmlMessage(
                 optionalStaff.get().getEmail(),
-                "Email de connection",
                 "no-reply@epsi.fr",
+                "Email de connection",
                 "<h1>E-mail de connexion</h1>" +
                 "<h2>Connection à partir d'une nouvelle configuration</h2>" +
                 "<p>Vous venez de vous connecter à partir d'une nouvelle configuration, veuillez saisir le code ci-dessous pour vous connecter:</p>" +
