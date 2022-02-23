@@ -10,7 +10,21 @@ public class Staff {
 
     private String browser;
     private String lastIpAddress;
+    private Integer failedConnections;
+    private String OTP;
 
+    public String getOTP() {
+        return OTP;
+    }
+    public void setOTP(String oTP) {
+        OTP = oTP;
+    }
+    public Integer getFailedConnections() {
+        return failedConnections;
+    }
+    public void setFailedConnections(Integer failedConnections) {
+        this.failedConnections = failedConnections;
+    }
     public String getEmail() {
         return email;
     }
