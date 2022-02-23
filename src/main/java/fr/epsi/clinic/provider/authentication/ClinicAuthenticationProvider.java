@@ -12,15 +12,17 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.ldap.authentication.ad.ActiveDirectoryLdapAuthenticationProvider;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import fr.epsi.clinic.configuration.EmailServiceConfiguration;
 import fr.epsi.clinic.mapper.StaffMapper;
 import fr.epsi.clinic.model.Staff;
 import fr.epsi.clinic.model.StaffLdapDetails;
+import fr.epsi.clinic.provider.totp.TotpProvider;
 import fr.epsi.clinic.service.ClinicAuthenticationService;
 import fr.epsi.clinic.service.StaffService;
 
@@ -54,7 +56,12 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
      */
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
-        HttpServletRequest request = ((ServletRequestAttributes)RequestContextHolder.getRequestAttributes()).getRequest();
+        RequestAttributes attributes = RequestContextHolder.getRequestAttributes();
+        if (Objects.isNull(attributes)) {
+            throw new NullPointerException("Attributes cannot be found");
+        }
+        HttpServletRequest request = ((ServletRequestAttributes) attributes).getRequest();
+      
         String username = authentication.getPrincipal().toString();
         Optional<Staff> optionalStaff = null;
         StaffLdapDetails staffLdapDetails = null;
@@ -95,7 +102,7 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
             this.clinicAuthenticationService.addUser(request, staffLdapDetails);
 
             //return successfull Authentication
-            return (UsernamePasswordAuthenticationToken)authentication;
+            return authentication;
         }
 
         //Check for suspicious connection
@@ -103,11 +110,27 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
 
         if(isSuspiciousConnection){
             System.out.println("UNUSUAL CONNECTION !!");
-            //TODO send an email that will ask the user to confirm its identity, once he clicked on "yes", update our database with its new informations
+            
+            // Send an email that will ask the user to confirm its identity
+            final TotpProvider provider = new TotpProvider();
+
+            final EmailServiceConfiguration emailServiceConfiguration = new EmailServiceConfiguration();
+            emailServiceConfiguration.sendHtmlMessage(
+                optionalStaff.get().getEmail(),
+                "Email de connection",
+                "no-reply@epsi.fr",
+                "<h1>E-mail de connexion</h1>" +
+                "<h2>Connection à partir d'une nouvelle configuration</h2>" +
+                "<p>Vous venez de vous connecter à partir d'une nouvelle configuration, veuillez saisir le code ci-dessous pour vous connecter:</p>" +
+                // TODO: Rendre l'adresse persistente et affiner la méthode d'envoie du OTP
+                "<a href=\"http://localhost:8080?totp=" + provider.generateOneTimePassword() + "\">Se connecter</a>"
+            );
+
+            // TODO: once he clicked on "yes", update our database with its new informations
         }
 
         //Return successfull authentication
-        return (UsernamePasswordAuthenticationToken)authentication;
+        return authentication;
     }
 
     /**

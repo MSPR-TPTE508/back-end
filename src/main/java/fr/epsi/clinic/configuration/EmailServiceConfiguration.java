@@ -82,6 +82,28 @@ public class EmailServiceConfiguration {
     }
 
     /**
+     * Send an email with html text
+     * @param to email
+     * @param subject
+     * @param from email
+     * @param htmlText content
+     */
+    public void sendHtmlMessage(String to, String from, String subject, String htmlText) {
+        MimeMessage message = this.mailSender.createMimeMessage();
+
+        try {
+            final MimeMessageHelper helper = new MimeMessageHelper(message, true);
+            helper.setFrom(from);
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(htmlText, true);
+            this.mailSender.send(message);
+        } catch (MessagingException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
      * Send an email with a file
      * @param to email
      * @param subject
@@ -98,6 +120,33 @@ public class EmailServiceConfiguration {
             helper.setTo(to);
             helper.setSubject(subject);
             helper.setText(text);
+    
+            final FileSystemResource file = new FileSystemResource(attachmentFile);
+            helper.addAttachment(file.getFilename(), file);
+    
+            this.mailSender.send(message);
+        } catch (MessagingException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Send an email with a file
+     * @param to email
+     * @param subject
+     * @param from email
+     * @param htmlText content
+     * @param attachmentFile file
+     */
+    public void sendHtmlMessageWithAttachment(String to, String from, String subject, String htmlText, File attachmentFile) {
+        MimeMessage message = this.mailSender.createMimeMessage();
+
+        try {
+            final MimeMessageHelper helper = new MimeMessageHelper(message, true);
+            helper.setFrom(from);
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(htmlText, true);
     
             final FileSystemResource file = new FileSystemResource(attachmentFile);
             helper.addAttachment(file.getFilename(), file);
