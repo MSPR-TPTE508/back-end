@@ -1,6 +1,7 @@
 package fr.epsi.clinic.service;
 
 import java.security.InvalidParameterException;
+
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -165,8 +166,25 @@ public class ClinicAuthenticationService {
     }
 
     public boolean verifyGivenOTP(String givenOTP, Staff staff){
-        //TODO implémenter la logique
-        return true;
+        // CHECK: givenOTP value
+        if (givenOTP.isEmpty()) {
+            throw new NullPointerException("givenOTP is null or empty");
+        }
+
+        // CHECK: staff object value
+        if (Objects.isNull(staff)) {
+            throw new NullPointerException("staff is null");
+        }
+
+        // CHECK: staff.givenOTP value
+        final String staffGivenOtp = staff.getOTP();
+
+        if (staffGivenOtp.isEmpty()) {
+            throw new NullPointerException("staff's givenOtp is empty");
+        }
+
+        // COMPARE: staff.givenOTP WITH givenOTP
+        return staffGivenOtp.equals(givenOTP);
     }
 
     public void deleteUserOTP(Staff staff){
