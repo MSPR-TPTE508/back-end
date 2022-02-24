@@ -31,8 +31,8 @@ public class StaffService {
 
     private StaffAttributesMapper staffAttributesMapper = new StaffAttributesMapper();
 
-    public void saveStaff(Staff staff){
-        staffRepository.save(staff);
+    public Optional<Staff> saveStaff(Staff staff){
+        return Optional.of(staffRepository.save(staff));
     }
 
     public Optional<Staff> findUserByEmail(String email){

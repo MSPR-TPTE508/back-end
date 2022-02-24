@@ -14,8 +14,7 @@ public class MainController {
     }
 
     @GetMapping("/login")
-    public String login(Model model, Authentication authentication){
-        System.out.println("login request");
+    public String login(Model model){
         return "index";
     }
 }

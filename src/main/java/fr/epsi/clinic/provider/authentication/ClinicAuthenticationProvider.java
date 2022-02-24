@@ -13,6 +13,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.ldap.authentication.ad.ActiveDirectoryLdapAuthenticationProvider;
+import org.springframework.security.ldap.userdetails.LdapUserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -99,10 +100,7 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
 
         //Add a Staff if the he's not already in our Database
         if(optionalStaff.isEmpty()){
-            this.clinicAuthenticationService.addUser(request, staffLdapDetails);
-
-            //return successfull Authentication
-            return authentication;
+            optionalStaff = this.clinicAuthenticationService.addUser(request, staffLdapDetails);
         }
 
         //Check for suspicious connection
@@ -129,7 +127,25 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
             // TODO: once he clicked on "yes", update our database with its new informations
         }
 
-        //Return successfull authentication
+        if(Objects.isNull(optionalStaff.get().getOTP())){
+            this.clinicAuthenticationService.doubleAuthentication(optionalStaff.get());
+            authentication.setAuthenticated(false);
+            request.getSession().setAttribute("hasOtp", true);
+
+        } else {
+            String givenOTP = request.getParameter("otp");
+
+            boolean isOTPValid = this.clinicAuthenticationService.verifyGivenOTP(givenOTP, optionalStaff.get());
+
+            if(isOTPValid){
+                authentication = createSuccessFullAuthentication(authentication, staffLdapDetails, optionalStaff.get());
+            } else {
+                authentication.setAuthenticated(false);
+            }
+
+            this.clinicAuthenticationService.deleteUserOTP(optionalStaff.get());
+        }
+
         return authentication;
     }
 
@@ -157,6 +173,21 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
         }
         
         return true;
+    }
+
+    /**
+     * Create successful authentication from a given authentication and a staffLdapDetails and a staff
+     * @param authentication
+     * @param staffLdapDetails
+     * @return
+     */
+    private Authentication createSuccessFullAuthentication(Authentication authentication, StaffLdapDetails staffLdapDetails, Staff staff){
+        staffLdapDetails.setStaff(staff);
+
+        UsernamePasswordAuthenticationToken customToken = new UsernamePasswordAuthenticationToken(staffLdapDetails, authentication.getCredentials(), authentication.getAuthorities());
+        customToken.setDetails(customToken.getDetails());
+
+        return customToken;
     }
 
     @Override

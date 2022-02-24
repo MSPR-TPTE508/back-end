@@ -25,10 +25,10 @@ public class Staff {
         this.lockTime = lockTime;
     }
     public String getOTP() {
-        return OTP;
+        return this.OTP;
     }
-    public void setOTP(String oTP) {
-        OTP = oTP;
+    public void setOTP(String OTP) {
+        this.OTP = OTP;
     }
     public Integer getFailedConnections() {
         return failedConnections;

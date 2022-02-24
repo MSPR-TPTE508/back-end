@@ -1,21 +1,20 @@
 package fr.epsi.clinic.service;
 
 import java.security.InvalidParameterException;
-
 import java.util.Date;
-import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.ldap.core.AttributesMapper;
-import org.springframework.ldap.core.LdapTemplate;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.stereotype.Service;
 
+import fr.epsi.clinic.configuration.EmailServiceConfiguration;
 import fr.epsi.clinic.model.Staff;
 import fr.epsi.clinic.model.StaffLdapDetails;
+import fr.epsi.clinic.provider.totp.TotpProvider;
 
 @Service
 public class ClinicAuthenticationService {
@@ -23,11 +22,14 @@ public class ClinicAuthenticationService {
     @Autowired
     StaffService staffService;
 
+    final TotpProvider totpProvider = new TotpProvider();
+    final EmailServiceConfiguration emailServiceConfiguration = new EmailServiceConfiguration();
+
     public User getUserByUsername(String username){
         return null;
     }
 
-    public void addUser(HttpServletRequest request, StaffLdapDetails staffLdapDetails){
+    public Optional<Staff> addUser(HttpServletRequest request, StaffLdapDetails staffLdapDetails){
         Staff staff = new Staff();
         String userAgent = request.getHeader("user-agent");
         String currentIp = request.getRemoteAddr();
@@ -37,7 +39,7 @@ public class ClinicAuthenticationService {
         staff.setBrowser(userAgent);
         staff.setLastIpAddress(currentIp);
 
-        staffService.saveStaff(staff);
+       return staffService.saveStaff(staff);
     }
 
     public boolean isUsuerIpIsUsual(HttpServletRequest request, Staff staff){
@@ -161,8 +163,23 @@ public class ClinicAuthenticationService {
         staffService.saveStaff(staff);
     }
 
-    public void doubleAuthentication(){
-        //TODO implémenter la logique
+    public void doubleAuthentication(Staff staff){
+        //generate OTP
+        String OTP = this.totpProvider.generateOneTimePassword();
+
+        //Save OTP in staff object
+        staff.setOTP(OTP);
+        this.staffService.saveStaff(staff);
+
+        //Send OTP to the user email
+        this.emailServiceConfiguration.sendHtmlMessage(
+            staff.getEmail(),
+            "no-reply@epsi.fr",
+            "Clinic double authentification avec mot de passe unique",
+            "<h1>Mot de passe à usage unique</h1>" +
+            "<h2>Veuillez copier et coller ce mot de passe à usage unique dans le formulaire</h2>" +
+            "<h3>"+ OTP +"</h3>"
+        );
     }
 
     public boolean verifyGivenOTP(String givenOTP, Staff staff){
@@ -188,7 +205,8 @@ public class ClinicAuthenticationService {
     }
 
     public void deleteUserOTP(Staff staff){
-        //Delete user from BDD
+        staff.setOTP(null);
+        this.staffService.saveStaff(staff);
     }
 
     public void sendEmailToConfirmUserIdentity(Staff staff){

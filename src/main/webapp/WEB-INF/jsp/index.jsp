@@ -1,16 +1,22 @@
+
+<%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>
 <!DOCTYPE HTML>
 <html>
+    
 
 <head>
     <meta charset="UTF-8" />
     <title>Welcome</title>
     <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    
+    
     <!--<link rel="stylesheet" type="text/css" href="${pageContext.request.contextPath}/style.css"/>-->
 </head>
 
 <body>
+    <%@page import="java.util.*" session ="true" %>
     <header class="w3-container w3-display-topmiddle">
-        <h1>Welcome</h1>
+        <h1>Welcome </h1>
     </header>
 
     <main class="w3-container w3-display-middle">
