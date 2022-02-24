@@ -40,7 +40,9 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
     private StaffService staffService;
 
     private ActiveDirectoryLdapAuthenticationProvider ldapProvider;
-    private StaffMapper staffMapper = new StaffMapper();
+    private final StaffMapper staffMapper = new StaffMapper();
+    private final TotpProvider provider = new TotpProvider();
+    private final EmailServiceConfiguration emailServiceConfiguration = new EmailServiceConfiguration();
 
     @Autowired
     LdapTemplate ldapTemplate;
@@ -64,41 +66,25 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
      */
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
-        RequestAttributes attributes = RequestContextHolder.getRequestAttributes();
+        HttpServletRequest request = getCurrentRequest(RequestContextHolder.getRequestAttributes());
+        authentication = retrieveAuthenticationDependingOnStaffStep(SecurityContextHolder.getContext().getAuthentication(), authentication);
 
-        //Authentication from first step
-        Authentication firsAuthentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if(Objects.nonNull(firsAuthentication)){
-            authentication = firsAuthentication;
-            
-        } else {
-            authentication = this.authenticateToActiveDirectory(authentication);
-        }
-
-        if (Objects.isNull(attributes)) {
-            throw new NullPointerException("Attributes cannot be found");
-        }
-        HttpServletRequest request = ((ServletRequestAttributes) attributes).getRequest();
-
-        UserDetails userDetails = (UserDetails)authentication.getPrincipal();
-        String username = userDetails.getUsername();
-
-        Optional<Staff> optionalStaff = null;
+        //Cast userDetails object from basic user principal
         StaffLdapDetails staffLdapDetails = null;
-
-        
-
-        // Get staff informations from active directory
-        Staff activeDirectoryStaff = this.staffService.findStaffInActiveDirectory(username);
-
-        optionalStaff = staffService.findUserByEmail(activeDirectoryStaff.getEmail());
+        String username = null;
 
         // Create specific userDetails to ensure that the user has been authenticated by
         // the Active directory
         if (Objects.nonNull(authentication)) {
             staffLdapDetails = (StaffLdapDetails) authentication.getPrincipal();
+            username = staffLdapDetails.getUsername();
         }
+
+        // Get staff informations from active directory
+        Staff activeDirectoryStaff = this.staffService.findStaffInActiveDirectory(username);
+
+        // Use active directory staff informations to get the user from our DB even if he's not authenticated to be able to check the number of failed connections
+        Optional<Staff> optionalStaff = staffService.findUserByEmail(activeDirectoryStaff.getEmail());
 
         if (optionalStaff.isPresent()) {
             // Check if antibruteforce is enabled for the staff
@@ -120,7 +106,7 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
             throw new BadCredentialsException("Wrong username or password");
         }
 
-        // Add a Staff if the he's not already in our Database
+        // Add a Staff if the staff he's not already in our Database
         if (optionalStaff.isEmpty()) {
             optionalStaff = this.clinicAuthenticationService.addUser(request, staffLdapDetails);
         }
@@ -129,57 +115,29 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
         boolean isSuspiciousConnection = this.isSuspiciousConnection(request, optionalStaff.get());
 
         if (isSuspiciousConnection) {
-            System.out.println("UNUSUAL CONNECTION !!");
-
-            // Send an email that will ask the user to confirm its identity
-            final TotpProvider provider = new TotpProvider();
-
-            final EmailServiceConfiguration emailServiceConfiguration = new EmailServiceConfiguration();
-            emailServiceConfiguration.sendHtmlMessage(
-                    optionalStaff.get().getEmail(),
-                    "no-reply@epsi.fr",
-                    "Email de connection",
-                    "<h1>E-mail de connexion</h1>" +
-                            "<h2>Connection à partir d'une nouvelle configuration</h2>" +
-                            "<p>Vous venez de vous connecter à partir d'une nouvelle configuration, veuillez saisir le code ci-dessous pour vous connecter:</p>"
-                            +
-                            // TODO: Rendre l'adresse persistente et affiner la méthode d'envoie du OTP
-                            "<a href=\"http://localhost:8080?totp=" + provider.generateOneTimePassword()
-                            + "\">Se connecter</a>");
-
-            // TODO: once he clicked on "yes", update our database with its new informations
+            this.sendSuspiciousEmail(optionalStaff.get());
         }
 
         //If user is anonymous
-        if (!authentication.getAuthorities().containsAll(PRE_AUTHENTICATED.getGrantedAuthorities())) {
+        if (!this.isStaffPreAuthenticated(authentication)) {
             this.clinicAuthenticationService.doubleAuthentication(optionalStaff.get());
         } 
         
         //If the user is performing a second step authentication
-        if(authentication.getAuthorities().containsAll(PRE_AUTHENTICATED.getGrantedAuthorities())){
-            String givenOTP = request.getParameter("otp");
-            boolean isOTPValid = false;
-
-            try {
-                isOTPValid = this.clinicAuthenticationService.verifyGivenOTP(givenOTP, optionalStaff.get());
-            } catch(Exception e){
-                throw new BadCredentialsException("Mauvais mot de passe à usage unique, reconnectez vous avec votre identifiant / Mot de passe");
-            }
-
-            this.clinicAuthenticationService.deleteUserOTP(optionalStaff.get());
-
-            if (isOTPValid) {
-                return this.createSuccessFullAuthenticationSecondStep(authentication, staffLdapDetails, optionalStaff.get());
-                
-            } else {
-                throw new BadCredentialsException("Mauvais mot de passe à usage unique, reconnectez vous avec votre identifiant / Mot de passe");
-            }
-
-            
+        if(this.isStaffPreAuthenticated(authentication)){
+            return this.authenticateUserWithOTP(authentication, request, optionalStaff.get(), staffLdapDetails);
         }
         
-
         return this.createSuccessFullAuthenticationFirstStep(authentication, staffLdapDetails, optionalStaff.get());
+    }
+
+    /**
+     * Check user's authentication status from authorities
+     * @param authentication
+     * @return true if the user is pre authenticated, else false
+     */
+    public boolean isStaffPreAuthenticated(Authentication authentication){
+        return authentication.getAuthorities().containsAll(PRE_AUTHENTICATED.getGrantedAuthorities());
     }
 
     /**
@@ -196,6 +154,34 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
         }
     }
 
+    /**
+     * Authenticate user from its second step authentication
+     * @param authentication
+     * @param request
+     * @param staff
+     * @param staffLdapDetails
+     * @return Successfull Authentication instance only if its OTP is equal to the one in our DB, else throw a BadCredentialsException
+     */
+    private Authentication authenticateUserWithOTP(Authentication authentication, HttpServletRequest request, Staff staff, StaffLdapDetails staffLdapDetails){
+        String givenOTP = request.getParameter("otp");
+        boolean isOTPValid = false;
+
+        try {
+            isOTPValid = this.clinicAuthenticationService.verifyGivenOTP(givenOTP, staff);
+        } catch(Exception e){
+            throw new BadCredentialsException("Mauvais mot de passe à usage unique, reconnectez vous avec votre identifiant / Mot de passe");
+        }
+
+        this.clinicAuthenticationService.deleteUserOTP(staff);
+
+        if (isOTPValid) {
+            return this.createSuccessFullAuthenticationSecondStep(authentication, staffLdapDetails, staff);
+            
+        } else {
+            throw new BadCredentialsException("Mauvais mot de passe à usage unique, reconnectez vous avec votre identifiant / Mot de passe");
+        }
+    }
+
     private boolean isSuspiciousConnection(HttpServletRequest request, Staff staff) {
 
         if (this.clinicAuthenticationService.isUserBrowserIsUsual(request, staff)) {
@@ -207,6 +193,53 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
         }
 
         return true;
+    }
+
+    private void sendSuspiciousEmail(Staff staff){
+        System.out.println("UNUSUAL CONNECTION !!");
+
+        // Send an email that will ask the user to confirm its identity
+
+        emailServiceConfiguration.sendHtmlMessage(
+                staff.getEmail(),
+                "no-reply@epsi.fr",
+                "Email de connection",
+                "<h1>E-mail de connexion</h1>" +
+                        "<h2>Connection à partir d'une nouvelle configuration</h2>" +
+                        "<p>Vous venez de vous connecter à partir d'une nouvelle configuration, veuillez saisir le code ci-dessous pour vous connecter:</p>"
+                        +
+                        // TODO: Rendre l'adresse persistente et affiner la méthode d'envoie du OTP
+                        "<a href=\"http://localhost:8080?totp=" + this.provider.generateOneTimePassword()
+                        + "\">Se connecter</a>");
+
+        // TODO: once he clicked on "yes", update our database with its new informations
+    }
+
+    /**
+     * Retrieve authentication based on the staff authentication step
+     * @param previousAuthentication
+     * @param currentAuthentication
+     * @return successfull authentication from active directory if the user hasn't previously been authenticated, else return previous authentication object
+     */
+    private Authentication retrieveAuthenticationDependingOnStaffStep(Authentication previousAuthentication, Authentication currentAuthentication){
+        if(Objects.nonNull(previousAuthentication)){
+            return previousAuthentication;
+        }
+        
+        return this.authenticateToActiveDirectory(currentAuthentication);
+    }
+
+    /**
+     * Retrieve current request from RequestAttributes Object
+     * @param requestAttributes
+     * @return current request from RequestAttributes Object
+     */
+    private HttpServletRequest getCurrentRequest(RequestAttributes requestAttributes){
+
+        if (Objects.isNull(requestAttributes)) {
+            throw new NullPointerException("Attributes cannot be found");
+        }
+        return ((ServletRequestAttributes) requestAttributes).getRequest();
     }
 
     /**
@@ -240,25 +273,6 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
         UsernamePasswordAuthenticationToken customToken = new UsernamePasswordAuthenticationToken(staffLdapDetails,
                 authentication.getCredentials(), AUTHENTICATED.getGrantedAuthorities());
         customToken.setDetails(customToken.getDetails());
-
-        return customToken;
-    }
-
-    
-    /**
-     * Create failed authentication
-     * 
-     * @param authentication
-     * @param staffLdapDetails
-     * @return
-     */
-    private Authentication createFailedAuthentication(Authentication authentication, StaffLdapDetails staffLdapDetails, Staff staff) {
-        staffLdapDetails.setStaff(staff);
-
-        UsernamePasswordAuthenticationToken customToken = new UsernamePasswordAuthenticationToken(staffLdapDetails,
-                authentication.getCredentials(), new HashSet<SimpleGrantedAuthority>());
-        customToken.setDetails(customToken.getDetails());
-        customToken.setAuthenticated(false);
 
         return customToken;
     }
