@@ -1,5 +1,6 @@
 package fr.epsi.clinic.service;
 
+import java.net.InetAddress;
 import java.security.InvalidParameterException;
 import java.util.Date;
 import java.util.Objects;
@@ -7,11 +8,15 @@ import java.util.Optional;
 
 import javax.servlet.http.HttpServletRequest;
 
+import com.maxmind.geoip2.model.CountryResponse;
+import com.maxmind.geoip2.record.Country;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.stereotype.Service;
 
 import fr.epsi.clinic.configuration.EmailServiceConfiguration;
+import fr.epsi.clinic.configuration.GeoIpConfiguration;
 import fr.epsi.clinic.model.Staff;
 import fr.epsi.clinic.model.StaffLdapDetails;
 import fr.epsi.clinic.provider.totp.TotpProvider;
@@ -22,14 +27,17 @@ public class ClinicAuthenticationService {
     @Autowired
     StaffService staffService;
 
-    final TotpProvider totpProvider = new TotpProvider();
-    final EmailServiceConfiguration emailServiceConfiguration = new EmailServiceConfiguration();
+    @Autowired
+    GeoIpConfiguration geoIpConfiguration;
+
+    private final TotpProvider totpProvider = new TotpProvider();
+    private final EmailServiceConfiguration emailServiceConfiguration = new EmailServiceConfiguration();
 
     public User getUserByUsername(String username){
         return null;
     }
 
-    public Optional<Staff> addUser(HttpServletRequest request, StaffLdapDetails staffLdapDetails){
+    public Optional<Staff> saveStaff(HttpServletRequest request, StaffLdapDetails staffLdapDetails){
         Staff staff = new Staff();
         String userAgent = request.getHeader("user-agent");
         String currentIp = request.getRemoteAddr();
@@ -42,7 +50,7 @@ public class ClinicAuthenticationService {
        return staffService.saveStaff(staff);
     }
 
-    public boolean isUsuerIpIsUsual(HttpServletRequest request, Staff staff){
+    public boolean isUserIpIsUsual(HttpServletRequest request, Staff staff){
         // Get current Ip
         if (request == null) {
             throw new InvalidParameterException("request is empty");
@@ -111,7 +119,7 @@ public class ClinicAuthenticationService {
 
         //If the staff has more than X attempt and the staff account is not locked
         if(failedConnections >= nbOfFailedMax && !this.isUserAccountLocked(staff)){
-            staff.setFailedConnections(0);
+            this.resetStaffFailedConnections(staff);
         }
 
         if(failedConnections >= nbOfFailedMax){
@@ -123,10 +131,56 @@ public class ClinicAuthenticationService {
     }
 
     /**
+     * Reset staff failed connections
+     * @param staff
+     */
+    public void resetStaffFailedConnections(Staff staff){
+        staff.setFailedConnections(0);
+        this.staffService.saveStaff(staff);
+    }
+
+    /**
+     * Check if the user's connection is from the clinic domain
+     * @param request
+     * @return
+     */
+    public boolean isUserIpAddressIsFromDomain(HttpServletRequest request){
+        try {
+            InetAddress ip = InetAddress.getByName(request.getRemoteAddr());
+
+            if(ip.isAnyLocalAddress() || ip.isLoopbackAddress()){
+                return true;
+            } else {
+                return false;
+            }
+        } catch(Exception e) {
+            return false;
+        }
+        
+    }
+
+        /**
+     * Check if the user's connection is from france
+     * @param request
+     * @return
+     */
+    public boolean isUserIpAddressConform(HttpServletRequest request){
+        
+        try{
+            InetAddress ip = InetAddress.getByName(request.getRemoteAddr());
+            CountryResponse response = geoIpConfiguration.getDbReader().country(ip);
+            
+            return response.getCountry().getName().equals("France");
+        } catch(Exception e){
+            return false;
+        }
+    }
+
+    /**
      * Set current date to lock staff account
      * @param staff
      */
-    private void lockStaffAccount(Staff staff){
+    public void lockStaffAccount(Staff staff){
         staff.setLockTime(new Date());
         staffService.saveStaff(staff);
     }

@@ -6,7 +6,7 @@
     <meta charset="UTF-8" />
     <title>Welcome</title>
     <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
-
+    <script src="https://www.google.com/recaptcha/enterprise.js?render=6Le_Op8eAAAAAInmsW4WSOIFaGQqkXHXIzn--YvO"></script>
 
     <!--<link rel="stylesheet" type="text/css" href="${pageContext.request.contextPath}/style.css"/>-->
 </head>
@@ -38,7 +38,6 @@
                 <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
                 <input type="submit" class="w3-input w3-border w3-round">
 
-                
             </form>
             <div class="w3-panel w3-pale-red w3-leftbar w3-border-red">
                 <p>${SPRING_SECURITY_LAST_EXCEPTION.message}</p>

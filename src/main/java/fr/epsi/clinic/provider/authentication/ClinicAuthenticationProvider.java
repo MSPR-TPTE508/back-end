@@ -68,7 +68,7 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
         HttpServletRequest request = getCurrentRequest(RequestContextHolder.getRequestAttributes());
         authentication = retrieveAuthenticationDependingOnStaffStep(SecurityContextHolder.getContext().getAuthentication(), authentication);
-
+        
         //Cast userDetails object from basic user principal
         StaffLdapDetails staffLdapDetails = null;
         String username = null;
@@ -108,15 +108,11 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
 
         // Add a Staff if the staff he's not already in our Database
         if (optionalStaff.isEmpty()) {
-            optionalStaff = this.clinicAuthenticationService.addUser(request, staffLdapDetails);
+            optionalStaff = this.clinicAuthenticationService.saveStaff(request, staffLdapDetails);
         }
 
         // Check for suspicious connection
-        boolean isSuspiciousConnection = this.isSuspiciousConnection(request, optionalStaff.get());
-
-        if (isSuspiciousConnection) {
-            this.sendSuspiciousEmail(optionalStaff.get());
-        }
+        this.connectionChecker(request, optionalStaff.get());
 
         //If user is anonymous
         if (!this.isStaffPreAuthenticated(authentication)) {
@@ -175,6 +171,7 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
         this.clinicAuthenticationService.deleteUserOTP(staff);
 
         if (isOTPValid) {
+            this.clinicAuthenticationService.resetStaffFailedConnections(staff);
             return this.createSuccessFullAuthenticationSecondStep(authentication, staffLdapDetails, staff);
             
         } else {
@@ -182,15 +179,26 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
         }
     }
 
-    private boolean isSuspiciousConnection(HttpServletRequest request, Staff staff) {
+    private boolean connectionChecker(HttpServletRequest request, Staff staff) {
 
-        if (this.clinicAuthenticationService.isUserBrowserIsUsual(request, staff)) {
-            return false;
+        if (!this.clinicAuthenticationService.isUserBrowserIsUsual(request, staff)) {
+            return true;
         }
 
-        if (this.clinicAuthenticationService.isUsuerIpIsUsual(request, staff)) {
+        if(this.clinicAuthenticationService.isUserIpAddressIsFromDomain(request)){
             return false;
         }
+        
+        if(this.clinicAuthenticationService.isUserIpAddressConform(request)){
+            if (!this.clinicAuthenticationService.isUserIpIsUsual(request, staff)) {
+                this.sendSuspiciousEmail(staff);
+            }
+
+            return false;
+        } else {
+            this.clinicAuthenticationService.lockStaffAccount(staff);
+        }
+
 
         return true;
     }
