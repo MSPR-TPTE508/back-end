@@ -67,18 +67,17 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
         HttpServletRequest request = getCurrentRequest(RequestContextHolder.getRequestAttributes());
-        authentication = retrieveAuthenticationDependingOnStaffStep(SecurityContextHolder.getContext().getAuthentication(), authentication);
+        Authentication dynamicAuthentication = retrieveAuthenticationDependingOnStaffStep(SecurityContextHolder.getContext().getAuthentication(), authentication);
         
-        //Cast userDetails object from basic user principal
         StaffLdapDetails staffLdapDetails = null;
-        String username = null;
+        String username = authentication.getPrincipal().toString();
 
         // Create specific userDetails to ensure that the user has been authenticated by
         // the Active directory
-        if (Objects.nonNull(authentication)) {
-            staffLdapDetails = (StaffLdapDetails) authentication.getPrincipal();
+        if (Objects.nonNull(dynamicAuthentication)) {
+            staffLdapDetails = (StaffLdapDetails) dynamicAuthentication.getPrincipal();
             username = staffLdapDetails.getUsername();
-        }
+        } 
 
         // Get staff informations from active directory
         Staff activeDirectoryStaff = this.staffService.findStaffInActiveDirectory(username);
@@ -115,16 +114,16 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
         this.connectionChecker(request, optionalStaff.get());
 
         //If user is anonymous
-        if (!this.isStaffPreAuthenticated(authentication)) {
+        if (!this.isStaffPreAuthenticated(dynamicAuthentication)) {
             this.clinicAuthenticationService.doubleAuthentication(optionalStaff.get());
         } 
         
         //If the user is performing a second step authentication
-        if(this.isStaffPreAuthenticated(authentication)){
-            return this.authenticateUserWithOTP(authentication, request, optionalStaff.get(), staffLdapDetails);
+        if(this.isStaffPreAuthenticated(dynamicAuthentication)){
+            return this.authenticateUserWithOTP(dynamicAuthentication, request, optionalStaff.get(), staffLdapDetails);
         }
         
-        return this.createSuccessFullAuthenticationFirstStep(authentication, staffLdapDetails, optionalStaff.get());
+        return this.createSuccessFullAuthenticationFirstStep(dynamicAuthentication, staffLdapDetails, optionalStaff.get());
     }
 
     /**
