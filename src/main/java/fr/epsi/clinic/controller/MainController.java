@@ -36,8 +36,10 @@ public class MainController {
         if(isOTPValid){ 
             this.verificationInformationTokenService.updateStaffWithTokenInformation(otp);
             model.addObject("message", "Votre connexion à été vérifiée et normalisée, veuillez vous connecter à votre compte.");
-        } 
-        model.addObject("message", "Votre connexion à été vérifiée et normalisée, veuillez vous connecter à votre compte.");
+        } else {
+            model.setViewName("index");
+        }
+
         return model;
     }
 }

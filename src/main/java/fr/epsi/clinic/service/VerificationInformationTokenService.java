@@ -1,19 +1,20 @@
 package fr.epsi.clinic.service;
 
 import java.time.LocalDate;
-import java.util.Date;
 import java.util.Optional;
 
 import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.encrypt.Encryptors;
+import org.springframework.security.crypto.encrypt.TextEncryptor;
+import org.springframework.security.crypto.keygen.KeyGenerators;
 import org.springframework.stereotype.Service;
 
 import fr.epsi.clinic.model.Staff;
 import fr.epsi.clinic.model.VerificationInformationToken;
 import fr.epsi.clinic.provider.totp.TotpProvider;
 import fr.epsi.clinic.repository.VerificationInformationTokenRepository;
-import net.bytebuddy.asm.Advice.Local;
 
 @Service
 public class VerificationInformationTokenService {
@@ -40,10 +41,13 @@ public class VerificationInformationTokenService {
         VerificationInformationToken token = new VerificationInformationToken();
         String newBrowser = request.getHeader("user-agent");
         LocalDate expirationDate = LocalDate.now().plusDays(1);
+        
+        //Generate encoded OTP to avoid brute force on this OTP
+        String otp = totpProvider.generateOneTimePassword();
 
         token.setEmail(staff.getEmail());
         token.setNewBrowser(newBrowser);
-        token.setSecret(totpProvider.generateOneTimePassword());
+        token.setSecret(otp);
         token.setExpirationDate(expirationDate);
         
 
