@@ -16,6 +16,7 @@ import fr.epsi.clinic.handler.LoginSuccessHandler;
 import fr.epsi.clinic.provider.authentication.ClinicAuthenticationProvider;
 import fr.epsi.clinic.service.ClinicAuthenticationService;
 import fr.epsi.clinic.service.StaffService;
+import fr.epsi.clinic.service.VerificationInformationTokenService;
 
 @Configuration
 public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
@@ -33,6 +34,9 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
     private ClinicAuthenticationService clinicAuthenticationService;
 
     @Autowired
+    private VerificationInformationTokenService verificationInformationTokenService;
+
+    @Autowired
     private LoginSuccessHandler loginSuccessHandler;
 
     @Override
@@ -42,6 +46,7 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
         http    
                 .authorizeRequests()
                 .antMatchers(HttpMethod.GET, "/login").permitAll()
+                .antMatchers(HttpMethod.GET, "/validation-identity").permitAll()
                 .antMatchers(HttpMethod.GET, "/").hasRole(AUTHENTICATED.name())
                 .antMatchers("/h2-console/**").permitAll()
                 .antMatchers("/**").denyAll()
@@ -58,7 +63,7 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
     @Override
     protected void configure(AuthenticationManagerBuilder auth) {
         ClinicAuthenticationProvider provider = new ClinicAuthenticationProvider(ldapDomain, ldapUrl, staffService,
-                clinicAuthenticationService);
+                clinicAuthenticationService, verificationInformationTokenService);
 
         auth.authenticationProvider(provider);
     }

@@ -3,7 +3,6 @@ package fr.epsi.clinic.provider.authentication;
 import static fr.epsi.clinic.configuration.ApplicationUserRole.AUTHENTICATED;
 import static fr.epsi.clinic.configuration.ApplicationUserRole.PRE_AUTHENTICATED;
 
-import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -16,9 +15,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.ldap.authentication.ad.ActiveDirectoryLdapAuthenticationProvider;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestAttributes;
@@ -29,15 +26,18 @@ import fr.epsi.clinic.configuration.EmailServiceConfiguration;
 import fr.epsi.clinic.mapper.StaffMapper;
 import fr.epsi.clinic.model.Staff;
 import fr.epsi.clinic.model.StaffLdapDetails;
+import fr.epsi.clinic.model.VerificationInformationToken;
 import fr.epsi.clinic.provider.totp.TotpProvider;
 import fr.epsi.clinic.service.ClinicAuthenticationService;
 import fr.epsi.clinic.service.StaffService;
+import fr.epsi.clinic.service.VerificationInformationTokenService;
 
 @Component
 public class ClinicAuthenticationProvider implements AuthenticationProvider {
 
     private ClinicAuthenticationService clinicAuthenticationService;
     private StaffService staffService;
+    private VerificationInformationTokenService verificationInformationTokenService;
 
     private ActiveDirectoryLdapAuthenticationProvider ldapProvider;
     private final StaffMapper staffMapper = new StaffMapper();
@@ -48,13 +48,14 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
     LdapTemplate ldapTemplate;
 
     public ClinicAuthenticationProvider(String ldapDomain, String ldapUrl, StaffService staffService,
-            ClinicAuthenticationService clinicAuthenticationService) {
+            ClinicAuthenticationService clinicAuthenticationService, VerificationInformationTokenService verificationInformationTokenService) {
         this.ldapProvider = new ActiveDirectoryLdapAuthenticationProvider(ldapDomain, ldapUrl);
         this.ldapProvider.setConvertSubErrorCodesToExceptions(true);
         this.ldapProvider.setUserDetailsContextMapper(staffMapper);
 
         this.staffService = staffService;
         this.clinicAuthenticationService = clinicAuthenticationService;
+        this.verificationInformationTokenService = verificationInformationTokenService;
     }
 
     public ClinicAuthenticationProvider() {
@@ -181,7 +182,11 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
     private boolean connectionChecker(HttpServletRequest request, Staff staff) {
 
         if (!this.clinicAuthenticationService.isUserBrowserIsUsual(request, staff)) {
-            return true;
+            VerificationInformationToken token = this.verificationInformationTokenService.createVerificationInformationToken(request, staff);
+            this.verificationInformationTokenService.saveVerificationInformationToken(token);
+            this.sendIdentityValidationEmail(token.getSecret(), staff);
+            
+            throw new BadCredentialsException("Une anomalie a été detectée à votre connexion, un email vous a été envoyé pour confirmer votre identité");
         }
 
         if(this.clinicAuthenticationService.isUserIpAddressIsFromDomain(request)){
@@ -190,7 +195,7 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
         
         if(this.clinicAuthenticationService.isUserIpAddressConform(request)){
             if (!this.clinicAuthenticationService.isUserIpIsUsual(request, staff)) {
-                this.sendSuspiciousEmail(staff);
+                this.sendAlertEmail(staff);
             }
 
             return false;
@@ -202,10 +207,7 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
         return true;
     }
 
-    private void sendSuspiciousEmail(Staff staff){
-        System.out.println("UNUSUAL CONNECTION !!");
-
-        // Send an email that will ask the user to confirm its identity
+    private void sendAlertEmail(Staff staff){
 
         emailServiceConfiguration.sendHtmlMessage(
                 staff.getEmail(),
@@ -218,6 +220,25 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
                         // TODO: Rendre l'adresse persistente et affiner la méthode d'envoie du OTP
                         "<a href=\"http://localhost:8080?totp=" + this.provider.generateOneTimePassword()
                         + "\">Se connecter</a>");
+
+        // TODO: once he clicked on "yes", update our database with its new informations
+    }
+
+    private void sendIdentityValidationEmail(String otp, Staff staff){
+
+        // Send an email that will ask the user to confirm its identity
+        emailServiceConfiguration.sendHtmlMessage(
+                staff.getEmail(),
+                "no-reply@epsi.fr",
+                "Email de verification d'identité",
+                "<h1>Email de verification d'identité</h1>" +
+                        "<h2>Connection à partir d'une nouvelle configuration</h2>" +
+                        "<p>Une connexion avec une nouvelle configuration a été detecté, merci de confirmer votre identité en cliquant sur le lien ci-dessous</p>"
+                        +"<em>Le compte est bloqué momentanément, en cliquant sur le lien ci-dessous il se débloquera immédiatement</em>"
+                        +
+                        // TODO: Rendre l'adresse persistente et affiner la méthode d'envoie du OTP
+                        "<a href=\"http://localhost:8080/validation-identity?otp=" + otp
+                        + "\">Confirmer mon identité</a>");
 
         // TODO: once he clicked on "yes", update our database with its new informations
     }
