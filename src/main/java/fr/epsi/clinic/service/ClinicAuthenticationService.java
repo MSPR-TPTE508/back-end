@@ -268,4 +268,9 @@ public class ClinicAuthenticationService {
     public void sendEmailToConfirmUserIdentity(Staff staff){
         //TODO implémenter la logique
     }
+
+    public void updateStaffIpAddress(Staff staff, HttpServletRequest request){
+        staff.setLastIpAddress(request.getRemoteAddr());
+        this.staffService.saveStaff(staff);
+    }
 }

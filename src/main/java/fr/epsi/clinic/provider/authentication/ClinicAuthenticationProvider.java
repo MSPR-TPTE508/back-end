@@ -198,6 +198,7 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
         if(this.clinicAuthenticationService.isUserIpAddressConform(request)){
             if (!this.clinicAuthenticationService.isUserIpIsUsual(request, staff)) {
                 this.sendAlertEmail(staff);
+                this.clinicAuthenticationService.updateStaffIpAddress(staff, request);
             }
 
             return false;
