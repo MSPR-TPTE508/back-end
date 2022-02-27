@@ -21,6 +21,9 @@ import fr.epsi.clinic.service.VerificationInformationTokenService;
 @Configuration
 public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
 
+    @Value("${application.url}")
+    private String applicationUrl;
+
     @Value("${ldap.url}")
     private String ldapUrl;
 
@@ -62,7 +65,7 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
 
     @Override
     protected void configure(AuthenticationManagerBuilder auth) {
-        ClinicAuthenticationProvider provider = new ClinicAuthenticationProvider(ldapDomain, ldapUrl, staffService,
+        ClinicAuthenticationProvider provider = new ClinicAuthenticationProvider(applicationUrl, ldapDomain, ldapUrl, staffService,
                 clinicAuthenticationService, verificationInformationTokenService);
 
         auth.authenticationProvider(provider);

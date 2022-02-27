@@ -35,6 +35,8 @@ import fr.epsi.clinic.service.VerificationInformationTokenService;
 @Component
 public class ClinicAuthenticationProvider implements AuthenticationProvider {
 
+    private String applicationUrl;
+
     private ClinicAuthenticationService clinicAuthenticationService;
     private StaffService staffService;
     private VerificationInformationTokenService verificationInformationTokenService;
@@ -47,12 +49,13 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
     @Autowired
     LdapTemplate ldapTemplate;
 
-    public ClinicAuthenticationProvider(String ldapDomain, String ldapUrl, StaffService staffService,
+    public ClinicAuthenticationProvider(String applicationUrl, String ldapDomain, String ldapUrl, StaffService staffService,
             ClinicAuthenticationService clinicAuthenticationService, VerificationInformationTokenService verificationInformationTokenService) {
         this.ldapProvider = new ActiveDirectoryLdapAuthenticationProvider(ldapDomain, ldapUrl);
         this.ldapProvider.setConvertSubErrorCodesToExceptions(true);
         this.ldapProvider.setUserDetailsContextMapper(staffMapper);
 
+        this.applicationUrl = applicationUrl;
         this.staffService = staffService;
         this.clinicAuthenticationService = clinicAuthenticationService;
         this.verificationInformationTokenService = verificationInformationTokenService;
@@ -218,7 +221,7 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
                         "<p>Vous venez de vous connecter à partir d'une nouvelle configuration, veuillez saisir le code ci-dessous pour vous connecter:</p>"
                         +
                         // TODO: Rendre l'adresse persistente et affiner la méthode d'envoie du OTP
-                        "<a href=\"http://localhost:8080?totp=" + this.provider.generateOneTimePassword()
+                        "<a href=\""+ this.applicationUrl +"?totp=" + this.provider.generateOneTimePassword()
                         + "\">Se connecter</a>");
 
         // TODO: once he clicked on "yes", update our database with its new informations
@@ -237,7 +240,7 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
                         +"<em>Le compte est bloqué momentanément, en cliquant sur le lien ci-dessous il se débloquera immédiatement</em>"
                         +
                         // TODO: Rendre l'adresse persistente et affiner la méthode d'envoie du OTP
-                        "<a href=\"http://localhost:8080/validation-identity?otp=" + otp
+                        "<a href=\""+ this.applicationUrl +"/validation-identity?otp=" + otp
                         + "\">Confirmer mon identité</a>");
 
         // TODO: once he clicked on "yes", update our database with its new informations
