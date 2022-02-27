@@ -1,12 +1,12 @@
 package fr.epsi.clinic.configuration;
 
 import java.io.File;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.InputStream;
+import java.net.URL;
 
+import com.maxmind.db.CHMCache;
 import com.maxmind.geoip2.DatabaseReader;
 
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
@@ -16,9 +16,15 @@ public class GeoIpConfiguration {
 
     public GeoIpConfiguration(){
         try {
-            Path path = Paths.get(getClass().getClassLoader().getResource(this.geoIpDatabaseFilename).toURI());
-            File file = path.toFile();
-            DatabaseReader dbReader = new DatabaseReader.Builder(file).build();
+            InputStream inputFile = GeoIpConfiguration.class.getClassLoader().getResourceAsStream(geoIpDatabaseFilename);
+            // ClassLoader classLoader = this.getClass().getClassLoader();
+            // URL url = classLoader.getResource(geoIpDatabaseFilename);
+
+            // // Getting resource(File) from class loader
+            // File dbFile =new File(url.getPath());
+
+            // Path path = Paths.get(getClass().getClassLoader().getResource(this.geoIpDatabaseFilename).toURI());
+            DatabaseReader dbReader = new DatabaseReader.Builder(inputFile).build();
 
             this.dbReader = dbReader;
         } catch(Exception e){

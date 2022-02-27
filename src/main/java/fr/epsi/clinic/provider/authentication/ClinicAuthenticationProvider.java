@@ -91,12 +91,11 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
 
         if (optionalStaff.isPresent()) {
             // Check if antibruteforce is enabled for the staff
-            boolean isUserAntiBruteForceDisabled = this.clinicAuthenticationService
-                    .isUserAntiBruteForceDisabled(optionalStaff.get());
+            boolean isUserAntiBruteForceDisabled = this.clinicAuthenticationService.isUserAntiBruteForceDisabled(optionalStaff.get());
 
             if (!isUserAntiBruteForceDisabled) {
                 throw new BadCredentialsException(
-                        "Account locked due to a number of failed connections, please try again in few minutes");
+                        "Account locked, please try again in few minutes");
             }
         }
 
