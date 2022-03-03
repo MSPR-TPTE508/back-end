@@ -23,7 +23,7 @@
         <main class="w3-container w3-display-middle">
             <form method="post" action="/login">
                 <sec:authorize access="isAnonymous()">
-                    <label for="username">Adresse e-mail:</label><br>
+                    <label for="username">Username</label><br>
                     <input type="text" id="username" name="username" class="w3-input w3-border w3-round"><br>
                     <label for="password">Mot de passe:</label><br>
                     <input type="password" id="password" name="password" class="w3-input w3-border w3-round"><br>
