@@ -216,13 +216,11 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
                 staff.getEmail(),
                 "no-reply@epsi.fr",
                 "Email de connection",
-                "<h1>E-mail de connexion</h1>" +
-                        "<h2>Connection à partir d'une nouvelle configuration</h2>" +
-                        "<p>Vous venez de vous connecter à partir d'une nouvelle configuration, veuillez saisir le code ci-dessous pour vous connecter:</p>"
-                        +
-                        // TODO: Rendre l'adresse persistente et affiner la méthode d'envoie du OTP
-                        "<a href=\""+ this.applicationUrl +"?totp=" + this.provider.generateOneTimePassword()
-                        + "\">Se connecter</a>");
+                "<p>Une nouvelle tentative de connexion a été détectée recemment à partir d'un source inconnue.</p>" +
+                "<p>Si vous êtes à l'origine de cette connexion, vous pouvez ignorer ce méssage.</p>" +
+                "<p>Sinon, il est vivement conseillé d'effectuer un changement de mot de passe rapidement.</p>" +
+                "<p>Pour protéger votre compte, il est conseillé de ne jamais divulger vos identifiants et changer de mot de passe régulièrement.</p>"
+        );
 
         // TODO: once he clicked on "yes", update our database with its new informations
     }
