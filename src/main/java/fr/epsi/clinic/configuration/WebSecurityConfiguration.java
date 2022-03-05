@@ -2,6 +2,10 @@ package fr.epsi.clinic.configuration;
 
 import static fr.epsi.clinic.configuration.ApplicationUserRole.AUTHENTICATED;
 
+import java.net.http.HttpClient;
+
+import javax.net.ssl.SSLContext;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
@@ -9,7 +13,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.web.authentication.Http403ForbiddenEntryPoint;
 
 import fr.epsi.clinic.handler.CustomAccessDeniedHandler;
 import fr.epsi.clinic.handler.LoginSuccessHandler;
@@ -44,6 +47,8 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
+        http.requiresChannel(channel -> channel.anyRequest().requiresSecure());
+
         http.exceptionHandling().accessDeniedHandler(new CustomAccessDeniedHandler());
         
         http    

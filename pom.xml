@@ -84,6 +84,7 @@
 			<artifactId>java-otp</artifactId>
 			<version>0.3.1</version>
 		</dependency>
+	
 	</dependencies>
 
 	<build>
@@ -107,6 +108,7 @@
 				<configuration>
 					<nonFilteredFileExtensions>
 						<nonFilteredFileExtension>mmdb</nonFilteredFileExtension>
+						<nonFilteredFileExtension>p12</nonFilteredFileExtension>
 					</nonFilteredFileExtensions>
         		</configuration>
 			</plugin>
