@@ -99,6 +99,11 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
             }
         }
 
+        // Add a Staff if the staff he's not already in our Database whatever he is authenticated or not.
+        if (optionalStaff.isEmpty() && Objects.nonNull(activeDirectoryStaff)) {
+            optionalStaff = this.clinicAuthenticationService.saveStaff(request, activeDirectoryStaff);
+        }
+
         // If active directory cannot authenticate the user
         if (Objects.isNull(staffLdapDetails)) {
             if (optionalStaff.isPresent()) {
@@ -106,11 +111,6 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
             }
 
             throw new BadCredentialsException("Wrong username or password");
-        }
-
-        // Add a Staff if the staff he's not already in our Database
-        if (optionalStaff.isEmpty()) {
-            optionalStaff = this.clinicAuthenticationService.saveStaff(request, staffLdapDetails);
         }
 
         // Check for suspicious connection

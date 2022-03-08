@@ -14,10 +14,17 @@ public class Staff {
     private String lastIpAddress;
 
     private Integer failedConnections = 0;
+    private Date failedConnectionTime;
     private Date lockTime;
 
     private String OTP;
 
+    public Date getFailedConnectionTime() {
+        return failedConnectionTime;
+    }
+    public void setFailedConnectionTime(Date failedConnectionTime) {
+        this.failedConnectionTime = failedConnectionTime;
+    }
     public Date getLockTime() {
         return lockTime;
     }

@@ -6,7 +6,6 @@
     <meta charset="UTF-8" />
     <title>Welcome</title>
     <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
-    <script src="https://www.google.com/recaptcha/enterprise.js?render=6Le_Op8eAAAAAInmsW4WSOIFaGQqkXHXIzn--YvO"></script>
 
     <!--<link rel="stylesheet" type="text/css" href="${pageContext.request.contextPath}/style.css"/>-->
 </head>

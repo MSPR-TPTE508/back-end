@@ -37,17 +37,17 @@ public class ClinicAuthenticationService {
         return null;
     }
 
-    public Optional<Staff> saveStaff(HttpServletRequest request, StaffLdapDetails staffLdapDetails){
-        Staff staff = new Staff();
+    public Optional<Staff> saveStaff(HttpServletRequest request, Staff staff){
+        Staff staffToSave = new Staff();
         String userAgent = request.getHeader("user-agent");
         String currentIp = request.getRemoteAddr();
 
         //Initialize a staff object with its AD and Request values.
-        staff.setEmail(staffLdapDetails.getActiveDirectoryEmail());
-        staff.setBrowser(userAgent);
-        staff.setLastIpAddress(currentIp);
+        staffToSave.setEmail(staff.getEmail());
+        staffToSave.setBrowser(userAgent);
+        staffToSave.setLastIpAddress(currentIp);
 
-       return staffService.saveStaff(staff);
+       return staffService.saveStaff(staffToSave);
     }
 
     public boolean isUserIpIsUsual(HttpServletRequest request, Staff staff){
@@ -213,8 +213,37 @@ public class ClinicAuthenticationService {
      * @param staff
      */
     public void incrementStaffFailedConnection(Staff staff){
-        staff.setFailedConnections(staff.getFailedConnections() + 1);
+
+        //If the staff connectionFailedTimePassed returned false, increment by one, else restart the counter to 1
+        if(!this.isStaffConnectionFailedTimePassed(staff)){
+            staff.setFailedConnections(staff.getFailedConnections() + 1);
+        } else {
+            staff.setFailedConnections(1);
+            staff.setFailedConnectionTime(new Date());
+        }
+        
         staffService.saveStaff(staff);
+    }
+
+    /**
+     * Check the staff failed connection time to reset its attempts if it passed a certain time.
+     * @return true if the user has to reset the number of connection else false
+     */
+    private boolean isStaffConnectionFailedTimePassed(Staff staff){
+        if(Objects.isNull(staff.getFailedConnectionTime())){
+            return true;
+        }
+
+        int failedConnectionDuration = 1 * 60 * 1000;
+        long failedConnectionTimeInMillis = staff.getFailedConnectionTime().getTime();
+        long currentTimeInMillis = System.currentTimeMillis();
+         
+        //if staff connection date + the duration is less than the current date
+        if ((failedConnectionTimeInMillis + failedConnectionDuration) < currentTimeInMillis) {
+            return true;
+        }
+
+        return false;
     }
 
     public void doubleAuthentication(Staff staff){

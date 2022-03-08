@@ -57,7 +57,7 @@ public class StaffService {
             return foundStaffs.get(0);
         }
 
-        return new Staff();
+        return null;
     }
 
 }
