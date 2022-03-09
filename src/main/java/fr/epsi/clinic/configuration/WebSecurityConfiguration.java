@@ -57,6 +57,7 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
                 .antMatchers(HttpMethod.GET, "/validation-identity").permitAll()
                 .antMatchers(HttpMethod.GET, "/").hasRole(AUTHENTICATED.name())
                 .antMatchers("/h2-console/**").permitAll()
+                .antMatchers("/css/*").permitAll()
                 .antMatchers("/**").denyAll()
                 .and()
                 .csrf().ignoringAntMatchers("/h2-console/**")

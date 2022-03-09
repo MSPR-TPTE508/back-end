@@ -3,7 +3,8 @@
     <head>
         <meta charset="UTF-8" />
         <title>Espace utilisateur</title>
-        <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/css/w3.css" />
     </head>
 
     <body class="w3-light-grey">
