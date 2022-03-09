@@ -183,6 +183,21 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
 
     private boolean connectionChecker(HttpServletRequest request, Staff staff) {
 
+        if(this.clinicAuthenticationService.isUserIpAddressIsFromDomain(request)){
+            return true;
+        }
+
+        boolean isAddressConform = this.clinicAuthenticationService.isUserIpAddressConform(request);
+
+        if(isAddressConform){
+            if (!this.clinicAuthenticationService.isUserIpIsUsual(request, staff)) {
+                this.sendAlertEmail(staff);
+                this.clinicAuthenticationService.updateStaffIpAddress(staff, request);
+            }
+        } else if(!isAddressConform){
+            throw new BadCredentialsException("Connexion impossible depuis un territoire non français.");
+        }
+
         if (!this.clinicAuthenticationService.isUserBrowserIsUsual(request, staff)) {
             VerificationInformationToken token = this.verificationInformationTokenService.createVerificationInformationToken(request, staff);
             this.verificationInformationTokenService.saveVerificationInformationToken(token);
@@ -190,22 +205,6 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
             
             throw new BadCredentialsException("Une anomalie a été detectée à votre connexion, un email vous a été envoyé pour confirmer votre identité");
         }
-
-        if(this.clinicAuthenticationService.isUserIpAddressIsFromDomain(request)){
-            return false;
-        }
-        
-        if(this.clinicAuthenticationService.isUserIpAddressConform(request)){
-            if (!this.clinicAuthenticationService.isUserIpIsUsual(request, staff)) {
-                this.sendAlertEmail(staff);
-                this.clinicAuthenticationService.updateStaffIpAddress(staff, request);
-            }
-
-            return false;
-        } else {
-            this.clinicAuthenticationService.lockStaffAccount(staff);
-        }
-
 
         return true;
     }
