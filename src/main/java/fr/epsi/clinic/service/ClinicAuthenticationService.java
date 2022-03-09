@@ -9,7 +9,6 @@ import java.util.Optional;
 import javax.servlet.http.HttpServletRequest;
 
 import com.maxmind.geoip2.model.CountryResponse;
-import com.maxmind.geoip2.record.Country;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.User;
@@ -18,7 +17,6 @@ import org.springframework.stereotype.Service;
 import fr.epsi.clinic.configuration.EmailServiceConfiguration;
 import fr.epsi.clinic.configuration.GeoIpConfiguration;
 import fr.epsi.clinic.model.Staff;
-import fr.epsi.clinic.model.StaffLdapDetails;
 import fr.epsi.clinic.provider.totp.TotpProvider;
 
 @Service
@@ -147,8 +145,8 @@ public class ClinicAuthenticationService {
     public boolean isUserIpAddressIsFromDomain(HttpServletRequest request){
         try {
             InetAddress ip = InetAddress.getByName(request.getRemoteAddr());
-
-            if(ip.isAnyLocalAddress() || ip.isLoopbackAddress()){
+            
+            if(ip.isAnyLocalAddress() || ip.isLoopbackAddress() || ip.isSiteLocalAddress()){
                 return true;
             } else {
                 return false;

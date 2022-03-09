@@ -17,13 +17,6 @@ public class GeoIpConfiguration {
     public GeoIpConfiguration(){
         try {
             InputStream inputFile = GeoIpConfiguration.class.getClassLoader().getResourceAsStream(geoIpDatabaseFilename);
-            // ClassLoader classLoader = this.getClass().getClassLoader();
-            // URL url = classLoader.getResource(geoIpDatabaseFilename);
-
-            // // Getting resource(File) from class loader
-            // File dbFile =new File(url.getPath());
-
-            // Path path = Paths.get(getClass().getClassLoader().getResource(this.geoIpDatabaseFilename).toURI());
             DatabaseReader dbReader = new DatabaseReader.Builder(inputFile).build();
 
             this.dbReader = dbReader;
