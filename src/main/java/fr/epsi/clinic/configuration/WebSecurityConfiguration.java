@@ -13,6 +13,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 import fr.epsi.clinic.handler.CustomAccessDeniedHandler;
 import fr.epsi.clinic.handler.LoginSuccessHandler;
@@ -50,8 +51,8 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
         http.requiresChannel(channel -> channel.anyRequest().requiresSecure());
 
         http.exceptionHandling().accessDeniedHandler(new CustomAccessDeniedHandler());
-        
-        http    
+
+        http
                 .authorizeRequests()
                 .antMatchers(HttpMethod.GET, "/login").permitAll()
                 .antMatchers(HttpMethod.GET, "/validation-identity").permitAll()
@@ -65,13 +66,19 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
                 .headers().frameOptions().sameOrigin()
                 .and()
                 .formLogin()
-                    .loginPage("/login")
-                    .successHandler(loginSuccessHandler);
+                .loginPage("/login")
+                .successHandler(loginSuccessHandler)
+                .and()
+                .logout().logoutRequestMatcher(new AntPathRequestMatcher("/logout"))
+                .logoutSuccessUrl("/logout.done").deleteCookies("JSESSIONID")
+                .invalidateHttpSession(true);
+
     }
 
     @Override
     protected void configure(AuthenticationManagerBuilder auth) {
-        ClinicAuthenticationProvider provider = new ClinicAuthenticationProvider(applicationUrl, ldapDomain, ldapUrl, staffService,
+        ClinicAuthenticationProvider provider = new ClinicAuthenticationProvider(applicationUrl, ldapDomain, ldapUrl,
+                staffService,
                 clinicAuthenticationService, verificationInformationTokenService);
 
         auth.authenticationProvider(provider);

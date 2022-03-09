@@ -10,6 +10,7 @@
     <body class="w3-light-grey">
         <header class="w3-container w3-display-topmiddle w3-teal" style="width: 100%">
             <h1 style="text-align: center;">Clinique</h1>
+            <a href="/logout">Logout</a>
         </header>
 
         <main class="w3-container w3-display-middle">
