@@ -215,10 +215,10 @@ public class ClinicAuthenticationProvider implements AuthenticationProvider {
                 staff.getEmail(),
                 "no-reply@epsi.fr",
                 "Email de connection",
-                "<p>Une nouvelle tentative de connexion a été détectée recemment à partir d'un source inconnue.</p>" +
-                "<p>Si vous êtes à l'origine de cette connexion, vous pouvez ignorer ce méssage.</p>" +
-                "<p>Sinon, il est vivement conseillé d'effectuer un changement de mot de passe rapidement.</p>" +
-                "<p>Pour protéger votre compte, il est conseillé de ne jamais divulger vos identifiants et changer de mot de passe régulièrement.</p>"
+                "<p>Une nouvelle tentative de connexion a <strong>été détectée</strong> recemment à partir d'une <strong>source inconnue</strong>.</p>" +
+                "<p>Si vous êtes à l'origine de cette connexion, vous pouvez <strong>ignorer ce message</strong>.</p>" +
+                "<p>Sinon, il est vivement conseillé d'effectuer un <strong>changement de mot de passe rapidement</strong>.</p>" +
+                "<p>Pour protéger votre compte, il est conseillé de ne <strong>jamais divulger vos identifiants</strong> et <strong>changer de mot de passe régulièrement</strong>.</p>"
         );
 
         // TODO: once he clicked on "yes", update our database with its new informations
