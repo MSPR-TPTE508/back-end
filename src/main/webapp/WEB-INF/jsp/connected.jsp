@@ -10,7 +10,10 @@
     <body class="w3-light-grey">
         <header class="w3-container w3-display-topmiddle w3-teal" style="width: 100%">
             <h1 style="text-align: center;">Clinique</h1>
-            <a class="w3-button w3-round w3-border" href="/logout">Logout</a>
+            <form action="/logout" method=post>
+                <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"/>
+                <input class="w3-button w3-round w3-border" type="submit" value="logout">
+            </form>
         </header>
 
         <main class="w3-container w3-display-middle">
