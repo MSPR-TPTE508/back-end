@@ -27,7 +27,7 @@
         </main>
 
         <footer class="w3-container w3-teal w3-display-bottommiddle" style="text-align: center; width: 100%">
-            <p>2022 EPSI - MSPR 500</p>
+            <p>2022 EPSI - MSPR 508</p>
         </footer>
     </body>
 </html>
